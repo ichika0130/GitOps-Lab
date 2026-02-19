@@ -1,10 +1,11 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: apps/v1 # K8s API version
+kind: Deployment # Tell K8s Im going to build a long-term solution
 metadata:
-  name: nginx-deployment
+  name: nginx-deployment # give a name for this deployment
 spec:
-  replicas: 2
-  selector:
+  replicas: 2 
+# This is what I hope, no matter what happen to K8s, should keep 2 Nginx con# -tainer running
+  selector: # This will give a label to those containers
     matchLabels:
       app: nginx
     template:
