@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx # Ask Service to Search Pod with nginx label
+  ports:
+    - protocol: TCP
+      port: 80 # Port for Service
+      targetPort: 80 # Port for Pod Container Listener
+      nodePort: 32000
+  type: NodePort
