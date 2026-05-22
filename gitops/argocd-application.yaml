@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitops-lab-nginx
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/part-of: gitops-lab
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ichika0130/GitOps-Lab.git
+    targetRevision: main
+    path: manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gitops-lab
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

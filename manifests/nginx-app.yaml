@@ -1,20 +1,45 @@
-apiVersion: apps/v1 # K8s API version
-kind: Deployment # Tell K8s Im going to build a long-term solution
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: nginx-deployment # give a name for this deployment
+  name: nginx-deployment
+  labels:
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/part-of: gitops-lab
 spec:
-  replicas: 2 
-# This is what I hope, no matter what happen to K8s, should keep 2 Nginx con# -tainer running
-  selector: # This will give a label to those containers
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
     matchLabels:
-      app: nginx
+      app.kubernetes.io/name: nginx
   template:
     metadata:
       labels:
-        app: nginx
+        app.kubernetes.io/name: nginx
+        app.kubernetes.io/part-of: gitops-lab
     spec:
       containers:
-      - name: nginx
-        image: nginx:1.21.6
-        ports:
-        - containerPort: 80
+        - name: nginx
+          image: nginx:1.21.6
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi

@@ -2,11 +2,15 @@ apiVersion: v1
 kind: Service
 metadata:
   name: nginx-service
+  labels:
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/part-of: gitops-lab
 spec:
   selector:
-    app: nginx # Ask Service to Search Pod with nginx label
+    app.kubernetes.io/name: nginx
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 80 # Port for Service
       targetPort: 80 # Port for Pod Container Listener
       nodePort: 32000
