@@ -8,13 +8,14 @@ Cloud-Native CI/CD Pipelines with GitOps.
 
 The goal is to show how a cloud-native application can be deployed by using a
 Git repository as the source of truth. The implementation uses Kubernetes,
-Kustomize, GitHub Actions, and Argo CD.
+Kustomize, GitHub Actions, Kind, kubeconform, and Argo CD.
 
 ## Project Objectives
 
-- Define the application and infrastructure state declaratively.
+- Define application and infrastructure state declaratively.
 - Validate Kubernetes manifests before deployment.
-- Deploy the application automatically through a GitOps controller.
+- Test deployment in a temporary Kubernetes cluster.
+- Deploy the production environment automatically through Argo CD.
 - Demonstrate rollback through Git history.
 - Compare GitOps with a traditional CI/CD deployment model.
 - Document testing, observability, and secret-management considerations.
@@ -23,16 +24,16 @@ Kustomize, GitHub Actions, and Argo CD.
 
 The sample application is an NGINX web server deployed to Kubernetes. It is a
 small application by design, so the project can focus on the GitOps pipeline and
-the deployment process rather than application code.
+deployment process rather than application code.
 
-The deployed Kubernetes resources are:
+The production deployment creates:
 
 - `Namespace` named `gitops-lab`
 - `Deployment` named `nginx-deployment`
 - `Service` named `nginx-service`
 
-The deployment runs two NGINX replicas and includes readiness probes, liveness
-probes, and resource requests and limits.
+The production deployment runs two NGINX replicas and includes readiness probes,
+liveness probes, and resource requests and limits.
 
 ## Architecture
 
@@ -43,11 +44,11 @@ Developer
    v
 GitHub Repository
    |
-   | GitHub Actions validates and tests manifests
+   | GitHub Actions validates and tests prod overlay
    v
 main branch as desired state
    |
-   | Argo CD watches repository path: manifests/
+   | Argo CD watches manifests/overlays/prod
    v
 Kubernetes Cluster
    |
@@ -56,38 +57,64 @@ Kubernetes Cluster
 NGINX application in gitops-lab namespace
 ```
 
+More architecture detail is available in `docs/architecture.md`.
+
 ## Repository Structure
 
 ```text
 .
 |-- .github/workflows/validate-manifests.yml
+|-- Makefile
 |-- docs/
+|   |-- architecture.md
 |   |-- demo.md
+|   |-- evidence-template.md
 |   `-- report.md
 |-- gitops/
 |   `-- argocd-application.yaml
 |-- manifests/
 |   |-- kustomization.yaml
-|   |-- namespace.yaml
-|   |-- nginx-app.yaml
-|   `-- nginx-service.yaml
+|   |-- base/
+|   |   |-- kustomization.yaml
+|   |   |-- nginx-app.yaml
+|   |   `-- nginx-service.yaml
+|   `-- overlays/
+|       |-- dev/
+|       `-- prod/
 `-- README.md
 ```
 
 ## Declarative Infrastructure
 
-The desired Kubernetes state is stored in `manifests/`. Kustomize is used as the
-entry point, so the whole application can be rendered or deployed with one
-command:
+The desired Kubernetes state is stored in `manifests/`. Kustomize separates
+shared application resources from environment-specific configuration.
+
+| Environment | Kustomize path | Namespace | Replicas | NodePort |
+| --- | --- | --- | --- | --- |
+| dev | `manifests/overlays/dev` | `gitops-lab-dev` | 1 | 32001 |
+| prod | `manifests/overlays/prod` | `gitops-lab` | 2 | 32000 |
+
+The base contains reusable resources:
+
+- `nginx-app.yaml`
+- `nginx-service.yaml`
+
+The overlays define environment-specific namespace, labels, replica count, and
+NodePort.
+
+Render or deploy production:
 
 ```bash
-kubectl kustomize manifests
-kubectl apply -k manifests
+kubectl kustomize manifests/overlays/prod
+kubectl apply -k manifests/overlays/prod
 ```
 
-This keeps the infrastructure declarative. The cluster should match the files in
-Git, and changes are made by editing YAML files rather than manually changing
-live Kubernetes objects.
+The root `manifests/kustomization.yaml` points to the production overlay, so
+this command also deploys production:
+
+```bash
+kubectl apply -k manifests
+```
 
 ## GitOps Deployment
 
@@ -97,7 +124,7 @@ Important configuration choices:
 
 - `repoURL` points to this GitHub repository.
 - `targetRevision` is `main`.
-- `path` is `manifests`.
+- `path` is `manifests/overlays/prod`.
 - `automated.prune` removes resources that are deleted from Git.
 - `automated.selfHeal` restores resources when live cluster state drifts from
   Git.
@@ -109,28 +136,29 @@ the desired state in Git and reconciles differences automatically.
 ## CI Pipeline
 
 GitHub Actions runs on pushes to `main` and on pull requests. The workflow
-performs three levels of validation:
+performs these checks:
 
-1. Render the Kustomize configuration.
+1. Render the production Kustomize overlay.
 2. Validate the rendered Kubernetes objects with kubeconform.
-3. Deploy the manifests to a temporary Kind cluster and run a smoke test against
-   the NGINX service.
+3. Create a temporary Kind Kubernetes cluster.
+4. Deploy the production overlay.
+5. Wait for the NGINX deployment rollout.
+6. Run an HTTP smoke test against the NGINX service.
 
-This gives faster feedback before Argo CD applies a change to a real cluster.
+This gives feedback before Argo CD applies a change to a real cluster.
 
 ## Testing Strategy
 
 The project uses the following tests:
 
-- YAML parsing through Kustomize rendering.
+- Kustomize rendering for the desired state.
 - Kubernetes schema validation through kubeconform.
 - Deployment test in a temporary Kubernetes cluster.
 - Rollout test with `kubectl rollout status`.
 - HTTP smoke test that checks the NGINX welcome page.
 
-These tests cover the most important failure modes for this project: invalid
-YAML, invalid Kubernetes objects, failed scheduling, failed rollout, and a
-service that does not respond.
+These tests cover invalid YAML, invalid Kubernetes objects, failed scheduling,
+failed rollout, and a service that does not respond.
 
 ## Rollback Strategy
 
@@ -141,15 +169,12 @@ git revert <bad-commit>
 git push origin main
 ```
 
-After the revert is pushed, Argo CD detects the updated desired state and
-reconciles the cluster back to the previous working configuration.
+After the revert is pushed, GitHub Actions validates the reverted desired state.
+Argo CD then detects the updated state and reconciles the cluster back to the
+previous working configuration.
 
-This approach keeps Git as the source of truth. It is better than manually
-editing the live cluster because the rollback is reviewed, recorded, and
-repeatable.
-
-Argo CD also has application history and rollback features, but using Git revert
-is the clearest method for this project because it preserves the GitOps model.
+This keeps Git as the source of truth. It is better than manually editing the
+live cluster because the rollback is reviewed, recorded, and repeatable.
 
 ## Secrets Management
 
@@ -199,8 +224,10 @@ as Git commits.
 The project satisfies the core requirements of a GitOps-based CI/CD pipeline:
 
 - The application is declared in Git.
+- The manifest structure supports reusable base resources and environment
+  overlays.
 - CI validates and tests each change.
-- Argo CD automates deployment from Git to Kubernetes.
+- Argo CD automates production deployment from Git to Kubernetes.
 - Rollback is performed through Git history.
 - The workflow reduces manual deployment steps and provides a clear audit trail.
 
@@ -217,5 +244,5 @@ manifest problems early and Argo CD continuously corrects drift.
 - Final presentation evidence should include screenshots or command output from
   a real Argo CD sync.
 
-Future improvements could include canary deployments, Helm support,
-environment-specific overlays, Prometheus metrics, and a sealed-secret example.
+Future improvements could include canary deployments, Helm support, Prometheus
+metrics, and a sealed-secret example.

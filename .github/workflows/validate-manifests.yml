@@ -20,7 +20,7 @@ jobs:
           version: v1.33.0
 
       - name: Render Kustomize manifests
-        run: kubectl kustomize manifests > rendered.yaml
+        run: kubectl kustomize manifests/overlays/prod > rendered.yaml
 
       - name: Validate Kubernetes objects
         uses: yannh/kubeconform-action@v0.6.7
@@ -34,7 +34,7 @@ jobs:
           cluster_name: gitops-lab-ci
 
       - name: Deploy manifests
-        run: kubectl apply -k manifests
+        run: kubectl apply -k manifests/overlays/prod
 
       - name: Wait for rollout
         run: kubectl -n gitops-lab rollout status deployment/nginx-deployment --timeout=120s

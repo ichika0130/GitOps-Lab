@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gitops-lab
+  labels:
+    app.kubernetes.io/name: gitops-lab
+    app.kubernetes.io/part-of: gitops-lab
+    environment: prod

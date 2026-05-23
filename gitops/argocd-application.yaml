@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://github.com/ichika0130/GitOps-Lab.git
     targetRevision: main
-    path: manifests
+    path: manifests/overlays/prod
   destination:
     server: https://kubernetes.default.svc
     namespace: gitops-lab
