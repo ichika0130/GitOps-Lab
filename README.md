@@ -4,7 +4,7 @@ University Cloud Computing Final Project.
 
 This repository demonstrates a GitOps-based CI/CD workflow for deploying NGINX
 to Kubernetes. The project uses Kubernetes manifests, Kustomize overlays,
-GitHub Actions, Kind, kubeconform, and Argo CD.
+GitHub Actions, Kind, Kubernetes server-side dry run, and Argo CD.
 
 ## Repository Structure
 
@@ -132,8 +132,8 @@ Common examples:
 
 The GitHub Actions workflow in `.github/workflows/validate-manifests.yml`
 renders the production Kustomize overlay, validates the generated Kubernetes
-objects, deploys them to a temporary Kind cluster, and runs an HTTP smoke test
-on every push and pull request.
+objects with Kubernetes server-side dry run, deploys them to a temporary Kind
+cluster, and runs an HTTP smoke test on every push and pull request.
 
 Useful local commands:
 

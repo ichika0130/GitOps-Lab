@@ -22,16 +22,13 @@ jobs:
       - name: Render Kustomize manifests
         run: kubectl kustomize manifests/overlays/prod > rendered.yaml
 
-      - name: Validate Kubernetes objects
-        uses: yannh/kubeconform-action@v0.6.7
-        with:
-          files: rendered.yaml
-          strict: true
-
       - name: Create Kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: gitops-lab-ci
+
+      - name: Validate Kubernetes objects
+        run: kubectl apply --dry-run=server -f rendered.yaml
 
       - name: Deploy manifests
         run: kubectl apply -k manifests/overlays/prod

@@ -42,7 +42,7 @@ Screenshot:
 Expected evidence:
 
 - Kustomize render succeeded.
-- kubeconform validation succeeded.
+- Kubernetes server-side dry run validation succeeded.
 - Kind deployment succeeded.
 - NGINX smoke test succeeded.
 

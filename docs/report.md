@@ -8,7 +8,7 @@ Cloud-Native CI/CD Pipelines with GitOps.
 
 The goal is to show how a cloud-native application can be deployed by using a
 Git repository as the source of truth. The implementation uses Kubernetes,
-Kustomize, GitHub Actions, Kind, kubeconform, and Argo CD.
+Kustomize, GitHub Actions, Kind, Kubernetes server-side dry run, and Argo CD.
 
 ## Project Objectives
 
@@ -139,7 +139,7 @@ GitHub Actions runs on pushes to `main` and on pull requests. The workflow
 performs these checks:
 
 1. Render the production Kustomize overlay.
-2. Validate the rendered Kubernetes objects with kubeconform.
+2. Validate the rendered Kubernetes objects with Kubernetes server-side dry run.
 3. Create a temporary Kind Kubernetes cluster.
 4. Deploy the production overlay.
 5. Wait for the NGINX deployment rollout.
@@ -152,7 +152,7 @@ This gives feedback before Argo CD applies a change to a real cluster.
 The project uses the following tests:
 
 - Kustomize rendering for the desired state.
-- Kubernetes schema validation through kubeconform.
+- Kubernetes schema validation through server-side dry run.
 - Deployment test in a temporary Kubernetes cluster.
 - Rollout test with `kubectl rollout status`.
 - HTTP smoke test that checks the NGINX welcome page.

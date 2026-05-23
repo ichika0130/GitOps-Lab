@@ -29,7 +29,7 @@ Push a change or open a pull request.
 The workflow in `.github/workflows/validate-manifests.yml` should:
 
 1. Render the production overlay with Kustomize.
-2. Validate the rendered objects with kubeconform.
+2. Validate the rendered objects with Kubernetes server-side dry run.
 3. Create a temporary Kind Kubernetes cluster.
 4. Deploy the production overlay.
 5. Wait for the deployment rollout.
