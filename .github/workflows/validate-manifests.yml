@@ -27,6 +27,9 @@ jobs:
         with:
           cluster_name: gitops-lab-ci
 
+      - name: Prepare validation namespace
+        run: kubectl create namespace gitops-lab --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Validate Kubernetes objects
         run: kubectl apply --dry-run=server -f rendered.yaml
 
