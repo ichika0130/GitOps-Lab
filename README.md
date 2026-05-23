@@ -11,6 +11,9 @@ two-replica NGINX application to Kubernetes. The Kubernetes resources live in
 ```text
 .
 |-- .github/workflows/validate-manifests.yml
+|-- docs/
+|   |-- demo.md
+|   `-- report.md
 |-- gitops/
 |   `-- argocd-application.yaml
 |-- manifests/
@@ -79,6 +82,11 @@ Argo CD will watch the `main` branch and synchronize the resources from the
 If this repository is private, configure repository credentials in Argo CD
 before applying the application manifest.
 
+## Project Documentation
+
+- [Project report](docs/report.md)
+- [Demo guide](docs/demo.md)
+
 ## Updating the Application
 
 To change the desired state, edit the files in `manifests/`, commit the change,
@@ -96,5 +104,6 @@ Common examples:
 ## Validation
 
 The GitHub Actions workflow in `.github/workflows/validate-manifests.yml`
-renders the Kustomize manifests and validates the generated Kubernetes objects
-on every push and pull request.
+renders the Kustomize manifests, validates the generated Kubernetes objects,
+deploys them to a temporary Kind cluster, and runs an HTTP smoke test on every
+push and pull request.

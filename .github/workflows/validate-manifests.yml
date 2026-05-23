@@ -1,4 +1,4 @@
-name: Validate Kubernetes Manifests
+name: Validate and Test Kubernetes Manifests
 
 on:
   push:
@@ -27,3 +27,34 @@ jobs:
         with:
           files: rendered.yaml
           strict: true
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: gitops-lab-ci
+
+      - name: Deploy manifests
+        run: kubectl apply -k manifests
+
+      - name: Wait for rollout
+        run: kubectl -n gitops-lab rollout status deployment/nginx-deployment --timeout=120s
+
+      - name: Show deployed resources
+        run: kubectl -n gitops-lab get deployment,pods,svc
+
+      - name: Smoke test NGINX service
+        run: |
+          kubectl -n gitops-lab port-forward svc/nginx-service 8080:80 &
+          port_forward_pid=$!
+          trap 'kill "$port_forward_pid"' EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/ | grep -qi "Welcome to nginx"; then
+              exit 0
+            fi
+
+            sleep 2
+          done
+
+          curl -v http://127.0.0.1:8080/
+          exit 1
